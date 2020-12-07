@@ -1,51 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 
 namespace AnaliseCentavos
 {
-    class Aluno
-    {
-        private int idAluno;
-        private List<EntradaDeNota> notas;
-
-        public int QtdCentavos => notas.Sum(n => n.qtdCentavos);
-
-        public Aluno(int idAluno)
-        {
-            this.idAluno = idAluno; 
-            notas = new List<EntradaDeNota>();
-        }
-
-        public void AdicionaEntradaDeNota(string data, int qtdCentavos, string descricao)
-        {
-            notas.Add(new EntradaDeNota(data, qtdCentavos, descricao));
-        }
-
-        public override string ToString()
-        {
-            return $"aluno: {idAluno} centavos: {QtdCentavos}";
-        }
-    }
-
-    class EntradaDeNota
-    {
-        public string data;
-        public int qtdCentavos;
-        public string descricao;
-
-        public EntradaDeNota(string data, int qtdCentavos, string descricao)
-        {
-            this.data = data;
-            this.qtdCentavos = qtdCentavos;
-            this.descricao = descricao;
-        }
-    }
-
     class AnaliseCentavos
     {
+        static void Main(string[] args)
+        {
+            CalculateAndPrint(ParseData(GetLines(args.Length > 1 ? args[1] : "anon.txt")));
+            Console.ReadKey();
+        }
+
+        static string[] GetLines(string fileName)
+        {
+            string lines;
+
+            if (File.Exists(fileName))
+            {
+                Console.WriteLine("Lendo " + fileName);
+                lines = File.ReadAllText(fileName);
+            }
+            else
+            {
+                Console.WriteLine(fileName + " local não encontrado. Buscando em rede...");
+                lines = GetAnonFromURL();
+                Console.WriteLine("Sucesso.");
+            }
+
+            Console.WriteLine();
+
+            return lines.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        }
+
         static string GetAnonFromURL()
         {
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create("http://lad.dsc.ufcg.edu.br/loac/uploads/OAC/anon.txt");
@@ -55,38 +43,11 @@ namespace AnaliseCentavos
             return reader.ReadToEnd();
         }
 
-        static string[] SplitIntoLines(string input) => input.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-
-        static void Main(string[] args)
+        static Dictionary<int, Aluno> ParseData(string[] lines)
         {
-            string lines;
+            Dictionary<int, Aluno> alunos = new Dictionary<int, Aluno>();
 
-            string fileName = "anon.txt";
-
-            if (File.Exists(fileName))
-            {
-                Console.WriteLine("Lendo anon.txt...");
-                lines = File.ReadAllText(fileName);
-            }
-            else
-                try
-                {
-                    Console.WriteLine("anon.txt local não encontrado. Buscando em rede...");
-                    lines = GetAnonFromURL();
-                    Console.WriteLine("Sucesso.");
-                }
-                catch
-                {
-                    Console.WriteLine("Erro.");
-                    Console.ReadKey();
-                    return;
-                }
-
-            Console.WriteLine();
-
-            var alunos = new Dictionary<int, Aluno> ();
-
-            foreach (var l in SplitIntoLines(lines))
+            foreach (var l in lines)
             {
                 if (string.IsNullOrEmpty(l))
                     continue;
@@ -102,6 +63,11 @@ namespace AnaliseCentavos
                 alunos[idAluno].AdicionaEntradaDeNota(split[1], Convert.ToInt32(split[2]), l.Substring(comecaDescricao));
             }
 
+            return alunos;
+        }
+
+        static void CalculateAndPrint(Dictionary<int, Aluno> alunos)
+        {
             Aluno maiorAluno = null;
             int somaTotal = 0;
             int qtdAprovados = 0;
@@ -134,7 +100,6 @@ namespace AnaliseCentavos
             Console.WriteLine("qtd aprovados : " + qtdAprovados);
             Console.WriteLine("qtd final     : " + qtdFinal);
             Console.WriteLine("qtd reprovados: " + qtdReprovados);
-            Console.ReadKey();
         }
     }
 }
